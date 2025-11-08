@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "fillerwordsdetector"
+package-mode = false
+version = "0.0.0"
+description = "Telegram bot that detects filler words in a group chat."
+authors = ["Anton Potapov <fgreyeducation@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+python-telegram-bot = "20.1"
+python-decouple = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
