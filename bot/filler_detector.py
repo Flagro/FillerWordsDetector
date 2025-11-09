@@ -3,13 +3,12 @@ Filler words detection module.
 """
 
 import re
-from typing import List
 
 
 class FillerWordsDetector:
     """Detector for filler words in text messages."""
 
-    def __init__(self, filler_words: List[str]):
+    def __init__(self, filler_words: list[str]):
         """
         Initialize the filler words detector.
 
@@ -20,7 +19,7 @@ class FillerWordsDetector:
             word.lower().strip() for word in filler_words if word.strip()
         ]
 
-    def detect_filler_words(self, text: str) -> List[str]:
+    def detect_filler_words(self, text: str) -> list[str]:
         """
         Detect all filler words in the given text.
 

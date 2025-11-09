@@ -84,7 +84,10 @@ class TelegramFillerBot:
             and len(self.admin_handles) > 0
             and not self._is_admin(update)
         ):
-            await update.message.reply_text(Messages.UNAUTHORIZED_ADMIN)
+            try:
+                await update.message.reply_text(Messages.UNAUTHORIZED_ADMIN)
+            except Exception as e:
+                self.logger.error(f"Error sending unauthorized message: {e}")
             self.logger.warning(
                 f"Unauthorized start attempt by user {update.message.from_user.username}"
             )
@@ -94,11 +97,14 @@ class TelegramFillerBot:
         chat_id = update.effective_chat.id
         self.state_manager.set_active(chat_id, True)
 
-        await update.message.reply_text(
-            Messages.START_MESSAGE,
-            parse_mode=ParseMode.MARKDOWN,
-        )
-        self.logger.info(f"Bot activated in chat {chat_id}")
+        try:
+            await update.message.reply_text(
+                Messages.START_MESSAGE,
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            self.logger.info(f"Bot activated in chat {chat_id}")
+        except Exception as e:
+            self.logger.error(f"Error sending start message: {e}")
 
     async def stop_command(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -113,7 +119,10 @@ class TelegramFillerBot:
             and len(self.admin_handles) > 0
             and not self._is_admin(update)
         ):
-            await update.message.reply_text(Messages.UNAUTHORIZED_ADMIN)
+            try:
+                await update.message.reply_text(Messages.UNAUTHORIZED_ADMIN)
+            except Exception as e:
+                self.logger.error(f"Error sending unauthorized message: {e}")
             self.logger.warning(
                 f"Unauthorized stop attempt by user {update.message.from_user.username}"
             )
@@ -123,8 +132,11 @@ class TelegramFillerBot:
         chat_id = update.effective_chat.id
         self.state_manager.set_active(chat_id, False)
 
-        await update.message.reply_text(Messages.STOP_MESSAGE)
-        self.logger.info(f"Bot deactivated in chat {chat_id}")
+        try:
+            await update.message.reply_text(Messages.STOP_MESSAGE)
+            self.logger.info(f"Bot deactivated in chat {chat_id}")
+        except Exception as e:
+            self.logger.error(f"Error sending stop message: {e}")
 
     async def stats_command(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -142,7 +154,10 @@ class TelegramFillerBot:
 
         # Check if bot is active in this chat
         if not self.state_manager.is_active(chat_id):
-            await update.message.reply_text(Messages.BOT_NOT_ACTIVE)
+            try:
+                await update.message.reply_text(Messages.BOT_NOT_ACTIVE)
+            except Exception as e:
+                self.logger.error(f"Error sending bot not active message: {e}")
             return
 
         # Check if user is allowed to use the bot
@@ -151,7 +166,10 @@ class TelegramFillerBot:
             and len(self.allowed_handles) > 0
             and not self._is_allowed(update)
         ):
-            await update.message.reply_text(Messages.UNAUTHORIZED_USER)
+            try:
+                await update.message.reply_text(Messages.UNAUTHORIZED_USER)
+            except Exception as e:
+                self.logger.error(f"Error sending unauthorized user message: {e}")
             return
 
         # Get statistics from database
@@ -164,12 +182,14 @@ class TelegramFillerBot:
             daily_stats, monthly_stats, all_time_stats
         )
 
-        await update.message.reply_text(
-            stats_message,
-            parse_mode=ParseMode.MARKDOWN,
-        )
-
-        self.logger.info(f"Stats requested by user {user_id} in chat {chat_id}")
+        try:
+            await update.message.reply_text(
+                stats_message,
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            self.logger.info(f"Stats requested by user {user_id} in chat {chat_id}")
+        except Exception as e:
+            self.logger.error(f"Error sending stats message: {e}")
 
     async def handle_message(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -215,15 +235,17 @@ class TelegramFillerBot:
 
             notification = Messages.FILLER_WORD_DETECTED.format(words=words_text)
 
-            await update.message.reply_text(
-                notification,
-                parse_mode=ParseMode.MARKDOWN,
-            )
-
-            self.logger.info(
-                f"Filler words detected from user {username} (ID: {user_id}) "
-                f"in chat {chat_id}: {detected_words}"
-            )
+            try:
+                await update.message.reply_text(
+                    notification,
+                    parse_mode=ParseMode.MARKDOWN,
+                )
+                self.logger.info(
+                    f"Filler words detected from user {username} (ID: {user_id}) "
+                    f"in chat {chat_id}: {detected_words}"
+                )
+            except Exception as e:
+                self.logger.error(f"Error sending filler word notification: {e}")
 
     def _is_admin(self, update: Update) -> bool:
         """Check if the user is an admin."""

@@ -32,8 +32,7 @@ class FillerWordsDatabase:
                     user_id INTEGER NOT NULL,
                     chat_id INTEGER NOT NULL,
                     word TEXT NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(user_id, chat_id, word, timestamp)
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
                 """
             )
@@ -71,6 +70,9 @@ class FillerWordsDatabase:
         if timestamp is None:
             timestamp = datetime.now()
 
+        # Convert datetime to ISO format string for SQLite compatibility
+        timestamp_str = timestamp.isoformat() if isinstance(timestamp, datetime) else timestamp
+
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -79,14 +81,14 @@ class FillerWordsDatabase:
                     INSERT INTO filler_words_usage (user_id, chat_id, word, timestamp)
                     VALUES (?, ?, ?, ?)
                     """,
-                    (user_id, chat_id, word.lower(), timestamp),
+                    (user_id, chat_id, word.lower(), timestamp_str),
                 )
                 conn.commit()
                 return True
-        except sqlite3.IntegrityError:
-            # Duplicate entry (same user, chat, word, and timestamp)
+        except sqlite3.IntegrityError as e:
+            # Database constraint violation
             self.logger.warning(
-                f"Duplicate entry for user {user_id} in chat {chat_id}: {word}"
+                f"Database integrity error for user {user_id} in chat {chat_id}: {word} - {e}"
             )
             return False
         except Exception as e:
@@ -146,6 +148,8 @@ class FillerWordsDatabase:
             Dictionary with statistics
         """
         thirty_days_ago = datetime.now() - timedelta(days=30)
+        # Convert datetime to ISO format string for SQLite compatibility
+        thirty_days_ago_str = thirty_days_ago.isoformat()
 
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -156,7 +160,7 @@ class FillerWordsDatabase:
                 SELECT COUNT(*) FROM filler_words_usage
                 WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
                 """,
-                (user_id, chat_id, thirty_days_ago),
+                (user_id, chat_id, thirty_days_ago_str),
             )
             total_count = cursor.fetchone()[0]
 
@@ -168,7 +172,7 @@ class FillerWordsDatabase:
                 GROUP BY word
                 ORDER BY count DESC
                 """,
-                (user_id, chat_id, thirty_days_ago),
+                (user_id, chat_id, thirty_days_ago_str),
             )
             word_breakdown = cursor.fetchall()
 
@@ -189,6 +193,8 @@ class FillerWordsDatabase:
             Dictionary with statistics
         """
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        # Convert datetime to ISO format string for SQLite compatibility
+        today_start_str = today_start.isoformat()
 
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -199,7 +205,7 @@ class FillerWordsDatabase:
                 SELECT COUNT(*) FROM filler_words_usage
                 WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
                 """,
-                (user_id, chat_id, today_start),
+                (user_id, chat_id, today_start_str),
             )
             total_count = cursor.fetchone()[0]
 
@@ -211,7 +217,7 @@ class FillerWordsDatabase:
                 GROUP BY word
                 ORDER BY count DESC
                 """,
-                (user_id, chat_id, today_start),
+                (user_id, chat_id, today_start_str),
             )
             word_breakdown = cursor.fetchall()
 
