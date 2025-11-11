@@ -71,7 +71,9 @@ class FillerWordsDatabase:
             timestamp = datetime.now()
 
         # Convert datetime to ISO format string for SQLite compatibility
-        timestamp_str = timestamp.isoformat() if isinstance(timestamp, datetime) else timestamp
+        timestamp_str = (
+            timestamp.isoformat() if isinstance(timestamp, datetime) else timestamp
+        )
 
         try:
             with sqlite3.connect(self.db_path) as conn:

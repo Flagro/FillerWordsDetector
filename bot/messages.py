@@ -37,6 +37,9 @@ class Messages:
 
     UNAUTHORIZED_ADMIN = "Sorry, only administrators can manage this bot."
 
+    # Settings
+    TOP_N_WORDS = 5  # Number of top words to show in statistics
+
     def format_stats(self, daily: dict, monthly: dict, all_time: dict) -> str:
         """
         Format statistics into a readable message.
@@ -56,7 +59,7 @@ class Messages:
         if daily["total"] > 0:
             message += f"Total: *{daily['total']}*\n"
             if daily["breakdown"]:
-                for word, count in daily["breakdown"][:5]:  # Show top 5
+                for word, count in daily["breakdown"][: self.TOP_N_WORDS]:
                     message += f"  • {word}: {count}\n"
         else:
             message += self.NO_STATS_MESSAGE + "\n"
@@ -67,7 +70,7 @@ class Messages:
         if monthly["total"] > 0:
             message += f"Total: *{monthly['total']}*\n"
             if monthly["breakdown"]:
-                for word, count in monthly["breakdown"][:5]:  # Show top 5
+                for word, count in monthly["breakdown"][: self.TOP_N_WORDS]:
                     message += f"  • {word}: {count}\n"
         else:
             message += self.NO_STATS_MESSAGE + "\n"
@@ -78,7 +81,7 @@ class Messages:
         if all_time["total"] > 0:
             message += f"Total: *{all_time['total']}*\n"
             if all_time["breakdown"]:
-                for word, count in all_time["breakdown"][:5]:  # Show top 5
+                for word, count in all_time["breakdown"][: self.TOP_N_WORDS]:
                     message += f"  • {word}: {count}\n"
         else:
             message += self.NO_STATS_MESSAGE + "\n"
