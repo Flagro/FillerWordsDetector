@@ -2,6 +2,8 @@
 Messages for the Filler Words Detector Bot.
 """
 
+from typing import Optional
+
 
 class Messages:
     """Container for all bot messages."""
@@ -38,7 +40,9 @@ class Messages:
     UNAUTHORIZED_ADMIN = "Sorry, only administrators can manage this bot."
 
     # Settings
-    TOP_N_WORDS = 5  # Number of top words to show in statistics
+    TOP_N_WORDS: Optional[int] = (
+        5  # Number of top words to show in statistics (None = show all)
+    )
 
     def format_stats(self, daily: dict, monthly: dict, all_time: dict) -> str:
         """
@@ -59,7 +63,12 @@ class Messages:
         if daily["total"] > 0:
             message += f"Total: *{daily['total']}*\n"
             if daily["breakdown"]:
-                for word, count in daily["breakdown"][: self.TOP_N_WORDS]:
+                words_to_show = (
+                    daily["breakdown"]
+                    if self.TOP_N_WORDS is None
+                    else daily["breakdown"][: self.TOP_N_WORDS]
+                )
+                for word, count in words_to_show:
                     message += f"  • {word}: {count}\n"
         else:
             message += self.NO_STATS_MESSAGE + "\n"
@@ -70,7 +79,12 @@ class Messages:
         if monthly["total"] > 0:
             message += f"Total: *{monthly['total']}*\n"
             if monthly["breakdown"]:
-                for word, count in monthly["breakdown"][: self.TOP_N_WORDS]:
+                words_to_show = (
+                    monthly["breakdown"]
+                    if self.TOP_N_WORDS is None
+                    else monthly["breakdown"][: self.TOP_N_WORDS]
+                )
+                for word, count in words_to_show:
                     message += f"  • {word}: {count}\n"
         else:
             message += self.NO_STATS_MESSAGE + "\n"
@@ -81,7 +95,12 @@ class Messages:
         if all_time["total"] > 0:
             message += f"Total: *{all_time['total']}*\n"
             if all_time["breakdown"]:
-                for word, count in all_time["breakdown"][: self.TOP_N_WORDS]:
+                words_to_show = (
+                    all_time["breakdown"]
+                    if self.TOP_N_WORDS is None
+                    else all_time["breakdown"][: self.TOP_N_WORDS]
+                )
+                for word, count in words_to_show:
                     message += f"  • {word}: {count}\n"
         else:
             message += self.NO_STATS_MESSAGE + "\n"
