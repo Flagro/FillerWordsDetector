@@ -85,11 +85,12 @@ class TelegramFillerBot:
             and not self._is_admin(update)
         ):
             try:
-                await update.message.reply_text(Messages.UNAUTHORIZED_ADMIN)
+                await update.message.reply_text(self.messages.UNAUTHORIZED_ADMIN)
             except Exception as e:
                 self.logger.error(f"Error sending unauthorized message: {e}")
+            username = update.message.from_user.username or "Unknown"
             self.logger.warning(
-                f"Unauthorized start attempt by user {update.message.from_user.username}"
+                f"Unauthorized start attempt by user {username} (ID: {update.message.from_user.id})"
             )
             return
 
@@ -99,7 +100,7 @@ class TelegramFillerBot:
 
         try:
             await update.message.reply_text(
-                Messages.START_MESSAGE,
+                self.messages.START_MESSAGE,
                 parse_mode=ParseMode.MARKDOWN,
             )
             self.logger.info(f"Bot activated in chat {chat_id}")
@@ -120,11 +121,12 @@ class TelegramFillerBot:
             and not self._is_admin(update)
         ):
             try:
-                await update.message.reply_text(Messages.UNAUTHORIZED_ADMIN)
+                await update.message.reply_text(self.messages.UNAUTHORIZED_ADMIN)
             except Exception as e:
                 self.logger.error(f"Error sending unauthorized message: {e}")
+            username = update.message.from_user.username or "Unknown"
             self.logger.warning(
-                f"Unauthorized stop attempt by user {update.message.from_user.username}"
+                f"Unauthorized stop attempt by user {username} (ID: {update.message.from_user.id})"
             )
             return
 
@@ -133,7 +135,7 @@ class TelegramFillerBot:
         self.state_manager.set_active(chat_id, False)
 
         try:
-            await update.message.reply_text(Messages.STOP_MESSAGE)
+            await update.message.reply_text(self.messages.STOP_MESSAGE)
             self.logger.info(f"Bot deactivated in chat {chat_id}")
         except Exception as e:
             self.logger.error(f"Error sending stop message: {e}")
@@ -155,7 +157,7 @@ class TelegramFillerBot:
         # Check if bot is active in this chat
         if not self.state_manager.is_active(chat_id):
             try:
-                await update.message.reply_text(Messages.BOT_NOT_ACTIVE)
+                await update.message.reply_text(self.messages.BOT_NOT_ACTIVE)
             except Exception as e:
                 self.logger.error(f"Error sending bot not active message: {e}")
             return
@@ -167,7 +169,7 @@ class TelegramFillerBot:
             and not self._is_allowed(update)
         ):
             try:
-                await update.message.reply_text(Messages.UNAUTHORIZED_USER)
+                await update.message.reply_text(self.messages.UNAUTHORIZED_USER)
             except Exception as e:
                 self.logger.error(f"Error sending unauthorized user message: {e}")
             return
@@ -233,7 +235,7 @@ class TelegramFillerBot:
             unique_words = list(set(detected_words))
             words_text = ", ".join(f"*{word}*" for word in unique_words)
 
-            notification = Messages.FILLER_WORD_DETECTED.format(words=words_text)
+            notification = self.messages.FILLER_WORD_DETECTED.format(words=words_text)
 
             try:
                 await update.message.reply_text(
