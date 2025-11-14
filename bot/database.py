@@ -4,6 +4,7 @@ Database management for filler words tracking using SQLite.
 
 import sqlite3
 from datetime import datetime, timedelta
+from typing import Optional
 import logging
 
 
@@ -38,22 +39,25 @@ class FillerWordsDatabase:
             )
             # Create indexes for faster queries
             cursor.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_user_chat 
-                ON filler_words_usage(user_id, chat_id)
-                """
+                "CREATE INDEX IF NOT EXISTS idx_user_chat ON filler_words_usage(user_id, chat_id)"
             )
             cursor.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_timestamp 
-                ON filler_words_usage(timestamp)
-                """
+                "CREATE INDEX IF NOT EXISTS idx_timestamp ON filler_words_usage(timestamp)"
             )
             conn.commit()
             self.logger.info(f"Database initialized at {self.db_path}")
 
+    @staticmethod
+    def _to_iso_string(timestamp: datetime) -> str:
+        """Convert datetime to ISO format string for SQLite compatibility."""
+        return timestamp.isoformat() if isinstance(timestamp, datetime) else timestamp
+
     def record_filler_word(
-        self, user_id: int, chat_id: int, word: str, timestamp: datetime = None
+        self,
+        user_id: int,
+        chat_id: int,
+        word: str,
+        timestamp: Optional[datetime] = None,
     ) -> bool:
         """
         Record a filler word usage.
@@ -70,11 +74,6 @@ class FillerWordsDatabase:
         if timestamp is None:
             timestamp = datetime.now()
 
-        # Convert datetime to ISO format string for SQLite compatibility
-        timestamp_str = (
-            timestamp.isoformat() if isinstance(timestamp, datetime) else timestamp
-        )
-
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -83,12 +82,11 @@ class FillerWordsDatabase:
                     INSERT INTO filler_words_usage (user_id, chat_id, word, timestamp)
                     VALUES (?, ?, ?, ?)
                     """,
-                    (user_id, chat_id, word.lower(), timestamp_str),
+                    (user_id, chat_id, word.lower(), self._to_iso_string(timestamp)),
                 )
                 conn.commit()
                 return True
         except sqlite3.IntegrityError as e:
-            # Database constraint violation
             self.logger.warning(
                 f"Database integrity error for user {user_id} in chat {chat_id}: {word} - {e}"
             )
@@ -96,6 +94,55 @@ class FillerWordsDatabase:
         except Exception as e:
             self.logger.error(f"Error recording filler word: {e}")
             return False
+
+    def _get_stats(
+        self, user_id: int, chat_id: int, since: Optional[datetime] = None
+    ) -> dict:
+        """
+        Get statistics for a user in a specific chat, optionally filtered by time.
+
+        Args:
+            user_id: Telegram user ID
+            chat_id: Telegram chat ID
+            since: Optional datetime to filter records from (inclusive)
+
+        Returns:
+            Dictionary with 'total' count and 'breakdown' list of (word, count) tuples
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            # Build base query and parameters
+            base_where = "WHERE user_id = ? AND chat_id = ?"
+            params = [user_id, chat_id]
+
+            if since:
+                base_where += " AND timestamp >= ?"
+                params.append(self._to_iso_string(since))
+
+            # Get total count
+            cursor.execute(
+                f"SELECT COUNT(*) FROM filler_words_usage {base_where}",
+                params,
+            )
+            total_count = cursor.fetchone()[0]
+
+            # Get word breakdown
+            cursor.execute(
+                f"""
+                SELECT word, COUNT(*) as count FROM filler_words_usage
+                {base_where}
+                GROUP BY word
+                ORDER BY count DESC
+                """,
+                params,
+            )
+            word_breakdown = cursor.fetchall()
+
+            return {
+                "total": total_count,
+                "breakdown": word_breakdown,
+            }
 
     def get_stats_all_time(self, user_id: int, chat_id: int) -> dict:
         """
@@ -108,35 +155,7 @@ class FillerWordsDatabase:
         Returns:
             Dictionary with statistics
         """
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-
-            # Total count
-            cursor.execute(
-                """
-                SELECT COUNT(*) FROM filler_words_usage
-                WHERE user_id = ? AND chat_id = ?
-                """,
-                (user_id, chat_id),
-            )
-            total_count = cursor.fetchone()[0]
-
-            # Word breakdown
-            cursor.execute(
-                """
-                SELECT word, COUNT(*) as count FROM filler_words_usage
-                WHERE user_id = ? AND chat_id = ?
-                GROUP BY word
-                ORDER BY count DESC
-                """,
-                (user_id, chat_id),
-            )
-            word_breakdown = cursor.fetchall()
-
-            return {
-                "total": total_count,
-                "breakdown": word_breakdown,
-            }
+        return self._get_stats(user_id, chat_id)
 
     def get_stats_monthly(self, user_id: int, chat_id: int) -> dict:
         """
@@ -149,39 +168,8 @@ class FillerWordsDatabase:
         Returns:
             Dictionary with statistics
         """
-        thirty_days_ago = datetime.now() - timedelta(days=30)
-        # Convert datetime to ISO format string for SQLite compatibility
-        thirty_days_ago_str = thirty_days_ago.isoformat()
-
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-
-            # Total count for last 30 days
-            cursor.execute(
-                """
-                SELECT COUNT(*) FROM filler_words_usage
-                WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
-                """,
-                (user_id, chat_id, thirty_days_ago_str),
-            )
-            total_count = cursor.fetchone()[0]
-
-            # Word breakdown for last 30 days
-            cursor.execute(
-                """
-                SELECT word, COUNT(*) as count FROM filler_words_usage
-                WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
-                GROUP BY word
-                ORDER BY count DESC
-                """,
-                (user_id, chat_id, thirty_days_ago_str),
-            )
-            word_breakdown = cursor.fetchall()
-
-            return {
-                "total": total_count,
-                "breakdown": word_breakdown,
-            }
+        since = datetime.now() - timedelta(days=30)
+        return self._get_stats(user_id, chat_id, since)
 
     def get_stats_daily(self, user_id: int, chat_id: int) -> dict:
         """
@@ -194,41 +182,5 @@ class FillerWordsDatabase:
         Returns:
             Dictionary with statistics
         """
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        # Convert datetime to ISO format string for SQLite compatibility
-        today_start_str = today_start.isoformat()
-
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-
-            # Total count for today
-            cursor.execute(
-                """
-                SELECT COUNT(*) FROM filler_words_usage
-                WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
-                """,
-                (user_id, chat_id, today_start_str),
-            )
-            total_count = cursor.fetchone()[0]
-
-            # Word breakdown for today
-            cursor.execute(
-                """
-                SELECT word, COUNT(*) as count FROM filler_words_usage
-                WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
-                GROUP BY word
-                ORDER BY count DESC
-                """,
-                (user_id, chat_id, today_start_str),
-            )
-            word_breakdown = cursor.fetchall()
-
-            return {
-                "total": total_count,
-                "breakdown": word_breakdown,
-            }
-
-    def close(self) -> None:
-        """Close the database connection (cleanup method)."""
-        # sqlite3 connections are closed automatically when exiting context manager
-        pass
+        since = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        return self._get_stats(user_id, chat_id, since)
