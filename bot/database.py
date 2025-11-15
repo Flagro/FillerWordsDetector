@@ -112,31 +112,39 @@ class FillerWordsDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
 
-            # Build base query and parameters
-            base_where = "WHERE user_id = ? AND chat_id = ?"
-            params = [user_id, chat_id]
-
             if since:
-                base_where += " AND timestamp >= ?"
-                params.append(self._to_iso_string(since))
+                # Query with timestamp filter
+                count_query = """
+                    SELECT COUNT(*) FROM filler_words_usage
+                    WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
+                """
+                breakdown_query = """
+                    SELECT word, COUNT(*) as count FROM filler_words_usage
+                    WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
+                    GROUP BY word
+                    ORDER BY count DESC
+                """
+                params = (user_id, chat_id, self._to_iso_string(since))
+            else:
+                # Query without timestamp filter
+                count_query = """
+                    SELECT COUNT(*) FROM filler_words_usage
+                    WHERE user_id = ? AND chat_id = ?
+                """
+                breakdown_query = """
+                    SELECT word, COUNT(*) as count FROM filler_words_usage
+                    WHERE user_id = ? AND chat_id = ?
+                    GROUP BY word
+                    ORDER BY count DESC
+                """
+                params = (user_id, chat_id)
 
             # Get total count
-            cursor.execute(
-                f"SELECT COUNT(*) FROM filler_words_usage {base_where}",
-                params,
-            )
+            cursor.execute(count_query, params)
             total_count = cursor.fetchone()[0]
 
             # Get word breakdown
-            cursor.execute(
-                f"""
-                SELECT word, COUNT(*) as count FROM filler_words_usage
-                {base_where}
-                GROUP BY word
-                ORDER BY count DESC
-                """,
-                params,
-            )
+            cursor.execute(breakdown_query, params)
             word_breakdown = cursor.fetchall()
 
             return {
