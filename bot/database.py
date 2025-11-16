@@ -95,6 +95,76 @@ class FillerWordsDatabase:
             self.logger.error(f"Error recording filler word: {e}")
             return False
 
+    def _get_total_count(
+        self, user_id: int, chat_id: int, since: Optional[datetime] = None
+    ) -> int:
+        """
+        Get total count of filler words for a user in a specific chat.
+
+        Args:
+            user_id: Telegram user ID
+            chat_id: Telegram chat ID
+            since: Optional datetime to filter records from (inclusive)
+
+        Returns:
+            Total count of filler words
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            if since:
+                query = """
+                    SELECT COUNT(*) FROM filler_words_usage
+                    WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
+                """
+                params = (user_id, chat_id, self._to_iso_string(since))
+            else:
+                query = """
+                    SELECT COUNT(*) FROM filler_words_usage
+                    WHERE user_id = ? AND chat_id = ?
+                """
+                params = (user_id, chat_id)
+
+            cursor.execute(query, params)
+            return cursor.fetchone()[0]
+
+    def _get_word_breakdown(
+        self, user_id: int, chat_id: int, since: Optional[datetime] = None
+    ) -> list:
+        """
+        Get word breakdown statistics for a user in a specific chat.
+
+        Args:
+            user_id: Telegram user ID
+            chat_id: Telegram chat ID
+            since: Optional datetime to filter records from (inclusive)
+
+        Returns:
+            List of tuples (word, count) ordered by count descending
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            if since:
+                query = """
+                    SELECT word, COUNT(*) as count FROM filler_words_usage
+                    WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
+                    GROUP BY word
+                    ORDER BY count DESC
+                """
+                params = (user_id, chat_id, self._to_iso_string(since))
+            else:
+                query = """
+                    SELECT word, COUNT(*) as count FROM filler_words_usage
+                    WHERE user_id = ? AND chat_id = ?
+                    GROUP BY word
+                    ORDER BY count DESC
+                """
+                params = (user_id, chat_id)
+
+            cursor.execute(query, params)
+            return cursor.fetchall()
+
     def _get_stats(
         self, user_id: int, chat_id: int, since: Optional[datetime] = None
     ) -> dict:
@@ -109,48 +179,10 @@ class FillerWordsDatabase:
         Returns:
             Dictionary with 'total' count and 'breakdown' list of (word, count) tuples
         """
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-
-            if since:
-                # Query with timestamp filter
-                count_query = """
-                    SELECT COUNT(*) FROM filler_words_usage
-                    WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
-                """
-                breakdown_query = """
-                    SELECT word, COUNT(*) as count FROM filler_words_usage
-                    WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
-                    GROUP BY word
-                    ORDER BY count DESC
-                """
-                params = (user_id, chat_id, self._to_iso_string(since))
-            else:
-                # Query without timestamp filter
-                count_query = """
-                    SELECT COUNT(*) FROM filler_words_usage
-                    WHERE user_id = ? AND chat_id = ?
-                """
-                breakdown_query = """
-                    SELECT word, COUNT(*) as count FROM filler_words_usage
-                    WHERE user_id = ? AND chat_id = ?
-                    GROUP BY word
-                    ORDER BY count DESC
-                """
-                params = (user_id, chat_id)
-
-            # Get total count
-            cursor.execute(count_query, params)
-            total_count = cursor.fetchone()[0]
-
-            # Get word breakdown
-            cursor.execute(breakdown_query, params)
-            word_breakdown = cursor.fetchall()
-
-            return {
-                "total": total_count,
-                "breakdown": word_breakdown,
-            }
+        return {
+            "total": self._get_total_count(user_id, chat_id, since),
+            "breakdown": self._get_word_breakdown(user_id, chat_id, since),
+        }
 
     def get_stats_all_time(self, user_id: int, chat_id: int) -> dict:
         """
