@@ -111,21 +111,12 @@ class FillerWordsDatabase:
         """
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-
-            if since:
-                query = """
-                    SELECT COUNT(*) FROM filler_words_usage
-                    WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
-                """
-                params = (user_id, chat_id, self._to_iso_string(since))
-            else:
-                query = """
-                    SELECT COUNT(*) FROM filler_words_usage
-                    WHERE user_id = ? AND chat_id = ?
-                """
-                params = (user_id, chat_id)
-
-            cursor.execute(query, params)
+            query = """
+                SELECT COUNT(*) FROM filler_words_usage
+                WHERE user_id = ? AND chat_id = ? AND (? IS NULL OR timestamp >= ?)
+            """
+            since_str = self._to_iso_string(since) if since else None
+            cursor.execute(query, (user_id, chat_id, since_str, since_str))
             return cursor.fetchone()[0]
 
     def _get_word_breakdown(
@@ -144,25 +135,14 @@ class FillerWordsDatabase:
         """
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-
-            if since:
-                query = """
-                    SELECT word, COUNT(*) as count FROM filler_words_usage
-                    WHERE user_id = ? AND chat_id = ? AND timestamp >= ?
-                    GROUP BY word
-                    ORDER BY count DESC
-                """
-                params = (user_id, chat_id, self._to_iso_string(since))
-            else:
-                query = """
-                    SELECT word, COUNT(*) as count FROM filler_words_usage
-                    WHERE user_id = ? AND chat_id = ?
-                    GROUP BY word
-                    ORDER BY count DESC
-                """
-                params = (user_id, chat_id)
-
-            cursor.execute(query, params)
+            query = """
+                SELECT word, COUNT(*) as count FROM filler_words_usage
+                WHERE user_id = ? AND chat_id = ? AND (? IS NULL OR timestamp >= ?)
+                GROUP BY word
+                ORDER BY count DESC
+            """
+            since_str = self._to_iso_string(since) if since else None
+            cursor.execute(query, (user_id, chat_id, since_str, since_str))
             return cursor.fetchall()
 
     def _get_stats(
