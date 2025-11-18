@@ -204,3 +204,64 @@ class FillerWordsDatabase:
         """
         since = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         return self._get_stats(user_id, chat_id, since)
+
+    def reset_user_stats(self, user_id: int, chat_id: int) -> bool:
+        """
+        Reset statistics for a specific user in a specific chat.
+
+        Args:
+            user_id: Telegram user ID
+            chat_id: Telegram chat ID
+
+        Returns:
+            True if reset successfully, False otherwise
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    DELETE FROM filler_words_usage
+                    WHERE user_id = ? AND chat_id = ?
+                    """,
+                    (user_id, chat_id),
+                )
+                conn.commit()
+                rows_deleted = cursor.rowcount
+                self.logger.info(
+                    f"Reset stats for user {user_id} in chat {chat_id} ({rows_deleted} rows deleted)"
+                )
+                return True
+        except Exception as e:
+            self.logger.error(f"Error resetting user stats: {e}")
+            return False
+
+    def reset_chat_stats(self, chat_id: int) -> bool:
+        """
+        Reset statistics for all users in a specific chat.
+
+        Args:
+            chat_id: Telegram chat ID
+
+        Returns:
+            True if reset successfully, False otherwise
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    DELETE FROM filler_words_usage
+                    WHERE chat_id = ?
+                    """,
+                    (chat_id,),
+                )
+                conn.commit()
+                rows_deleted = cursor.rowcount
+                self.logger.info(
+                    f"Reset stats for entire chat {chat_id} ({rows_deleted} rows deleted)"
+                )
+                return True
+        except Exception as e:
+            self.logger.error(f"Error resetting chat stats: {e}")
+            return False
