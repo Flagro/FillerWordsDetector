@@ -62,6 +62,8 @@ class TelegramFillerBot:
         application.add_handler(CommandHandler("start", self.start_command))
         application.add_handler(CommandHandler("stop", self.stop_command))
         application.add_handler(CommandHandler("stats", self.stats_command))
+        application.add_handler(CommandHandler("reset", self.reset_command))
+        application.add_handler(CommandHandler("group_reset", self.group_reset_command))
 
         # Add message handler for filler word detection
         application.add_handler(
@@ -192,6 +194,111 @@ class TelegramFillerBot:
             self.logger.info(f"Stats requested by user {user_id} in chat {chat_id}")
         except Exception as e:
             self.logger.error(f"Error sending stats message: {e}")
+
+    async def reset_command(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        """Handle the /reset command - reset statistics for the requesting user."""
+        if (
+            not update.message
+            or not update.effective_chat
+            or not update.message.from_user
+        ):
+            return
+
+        chat_id = update.effective_chat.id
+        user_id = update.message.from_user.id
+        username = update.message.from_user.username or "Unknown"
+
+        # Check if bot is active in this chat
+        if not self.state_manager.is_active(chat_id):
+            try:
+                await update.message.reply_text(self.messages.BOT_NOT_ACTIVE)
+            except Exception as e:
+                self.logger.error(f"Error sending bot not active message: {e}")
+            return
+
+        # Check if user is allowed to use the bot
+        if (
+            self.allowed_handles
+            and len(self.allowed_handles) > 0
+            and not self._is_allowed(update)
+        ):
+            try:
+                await update.message.reply_text(self.messages.UNAUTHORIZED_USER)
+            except Exception as e:
+                self.logger.error(f"Error sending unauthorized user message: {e}")
+            return
+
+        # Reset user's statistics
+        success = self.database.reset_user_stats(user_id, chat_id)
+
+        if success:
+            try:
+                await update.message.reply_text(self.messages.RESET_SUCCESS)
+                self.logger.info(
+                    f"Stats reset by user {username} (ID: {user_id}) in chat {chat_id}"
+                )
+            except Exception as e:
+                self.logger.error(f"Error sending reset success message: {e}")
+        else:
+            try:
+                await update.message.reply_text(self.messages.RESET_ERROR)
+            except Exception as e:
+                self.logger.error(f"Error sending reset error message: {e}")
+
+    async def group_reset_command(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        """Handle the /group_reset command - reset statistics for entire group (admin only)."""
+        if not update.message or not update.effective_chat:
+            return
+
+        chat_id = update.effective_chat.id
+
+        # Check if bot is active in this chat
+        if not self.state_manager.is_active(chat_id):
+            try:
+                await update.message.reply_text(self.messages.BOT_NOT_ACTIVE)
+            except Exception as e:
+                self.logger.error(f"Error sending bot not active message: {e}")
+            return
+
+        # Check if user is an admin (required for group reset)
+        if (
+            self.admin_handles
+            and len(self.admin_handles) > 0
+            and not self._is_admin(update)
+        ):
+            try:
+                await update.message.reply_text(self.messages.UNAUTHORIZED_ADMIN)
+            except Exception as e:
+                self.logger.error(f"Error sending unauthorized admin message: {e}")
+            username = update.message.from_user.username or "Unknown"
+            self.logger.warning(
+                f"Unauthorized group_reset attempt by user {username} "
+                f"(ID: {update.message.from_user.id}) in chat {chat_id}"
+            )
+            return
+
+        # Reset all statistics for this chat
+        success = self.database.reset_chat_stats(chat_id)
+
+        if success:
+            try:
+                await update.message.reply_text(self.messages.GROUP_RESET_SUCCESS)
+                username = update.message.from_user.username or "Unknown"
+                self.logger.info(
+                    f"Group stats reset by admin {username} (ID: {update.message.from_user.id}) "
+                    f"in chat {chat_id}"
+                )
+            except Exception as e:
+                self.logger.error(f"Error sending group reset success message: {e}")
+        else:
+            try:
+                await update.message.reply_text(self.messages.GROUP_RESET_ERROR)
+            except Exception as e:
+                self.logger.error(f"Error sending group reset error message: {e}")
 
     async def handle_message(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE

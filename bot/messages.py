@@ -15,7 +15,9 @@ class Messages:
         "*Commands:*\n"
         "• /start - Start tracking filler words\n"
         "• /stop - Stop tracking filler words\n"
-        "• /stats - View your usage statistics\n\n"
+        "• /stats - View your usage statistics\n"
+        "• /reset - Reset your personal statistics\n"
+        "• /group_reset - Reset statistics for entire group (admin only)\n\n"
         "*How it works:*\n"
         "I'll monitor all messages and notify you when filler words are detected. "
         "You can view stats for today, this month, or all time!"
@@ -38,6 +40,16 @@ class Messages:
     UNAUTHORIZED_USER = "Sorry, you are not authorized to use this bot."
 
     UNAUTHORIZED_ADMIN = "Sorry, only administrators can manage this bot."
+
+    RESET_SUCCESS = "✅ Your statistics have been reset successfully!"
+
+    RESET_ERROR = "❌ Failed to reset your statistics. Please try again later."
+
+    GROUP_RESET_SUCCESS = (
+        "✅ All statistics for this group have been reset successfully!"
+    )
+
+    GROUP_RESET_ERROR = "❌ Failed to reset group statistics. Please try again later."
 
     # Settings
     TOP_N_WORDS: Optional[int] = (
