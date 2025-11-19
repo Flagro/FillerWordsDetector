@@ -52,9 +52,7 @@ class Messages:
     GROUP_RESET_ERROR = "❌ Failed to reset group statistics. Please try again later."
 
     # Settings
-    TOP_N_WORDS: Optional[int] = (
-        5  # Number of top words to show in statistics (None = show all)
-    )
+    TOP_N_WORDS: Optional[int] = None
 
     def format_stats(self, daily: dict, monthly: dict, all_time: dict) -> str:
         """
