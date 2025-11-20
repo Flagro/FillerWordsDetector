@@ -97,7 +97,7 @@ class Messages:
             sorted_words = sorted_words[: self.TOP_N_WORDS]
 
         # Format each word with its counts across periods
-        message += "*Breakdown by word:*\n"
+        message += "*Breakdown by word (word - daily - monthly - all-time):*\n"
         for word in sorted_words:
             daily_count = daily_dict.get(word, 0)
             monthly_count = monthly_dict.get(word, 0)
