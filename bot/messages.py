@@ -68,51 +68,43 @@ class Messages:
         """
         message = self.STATS_HEADER
 
-        # Daily stats
-        message += self.STATS_PERIOD_DAILY
-        if daily["total"] > 0:
-            message += f"Total: *{daily['total']}*\n"
-            if daily["breakdown"]:
-                words_to_show = (
-                    daily["breakdown"]
-                    if self.TOP_N_WORDS is None
-                    else daily["breakdown"][: self.TOP_N_WORDS]
-                )
-                for word, count in words_to_show:
-                    message += f"  • {word}: {count}\n"
-        else:
-            message += self.NO_STATS_MESSAGE + "\n"
-        message += "\n"
+        # Show totals for each period
+        message += f"📅 Today: *{daily['total']}* | "
+        message += f"📆 Last 30 Days: *{monthly['total']}* | "
+        message += f"🕐 All-Time: *{all_time['total']}*\n\n"
 
-        # Monthly stats
-        message += self.STATS_PERIOD_MONTHLY
-        if monthly["total"] > 0:
-            message += f"Total: *{monthly['total']}*\n"
-            if monthly["breakdown"]:
-                words_to_show = (
-                    monthly["breakdown"]
-                    if self.TOP_N_WORDS is None
-                    else monthly["breakdown"][: self.TOP_N_WORDS]
-                )
-                for word, count in words_to_show:
-                    message += f"  • {word}: {count}\n"
-        else:
-            message += self.NO_STATS_MESSAGE + "\n"
-        message += "\n"
+        # Collect all unique words across all periods
+        all_words = set()
+        daily_dict = dict(daily.get("breakdown", []))
+        monthly_dict = dict(monthly.get("breakdown", []))
+        all_time_dict = dict(all_time.get("breakdown", []))
 
-        # All-time stats
-        message += self.STATS_PERIOD_ALL_TIME
-        if all_time["total"] > 0:
-            message += f"Total: *{all_time['total']}*\n"
-            if all_time["breakdown"]:
-                words_to_show = (
-                    all_time["breakdown"]
-                    if self.TOP_N_WORDS is None
-                    else all_time["breakdown"][: self.TOP_N_WORDS]
-                )
-                for word, count in words_to_show:
-                    message += f"  • {word}: {count}\n"
-        else:
-            message += self.NO_STATS_MESSAGE + "\n"
+        all_words.update(daily_dict.keys())
+        all_words.update(monthly_dict.keys())
+        all_words.update(all_time_dict.keys())
+
+        if not all_words:
+            message += self.NO_STATS_MESSAGE
+            return message
+
+        # Sort words by all-time count (descending)
+        sorted_words = sorted(
+            all_words, key=lambda w: all_time_dict.get(w, 0), reverse=True
+        )
+
+        # Apply TOP_N_WORDS limit if set
+        if self.TOP_N_WORDS is not None:
+            sorted_words = sorted_words[: self.TOP_N_WORDS]
+
+        # Format each word with its counts across periods
+        message += "*Breakdown by word:*\n"
+        for word in sorted_words:
+            daily_count = daily_dict.get(word, 0)
+            monthly_count = monthly_dict.get(word, 0)
+            all_time_count = all_time_dict.get(word, 0)
+
+            message += (
+                f"• {word}: `{daily_count}` / `{monthly_count}` / `{all_time_count}`\n"
+            )
 
         return message
