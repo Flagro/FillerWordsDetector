@@ -103,8 +103,6 @@ class Messages:
             monthly_count = monthly_dict.get(word, 0)
             all_time_count = all_time_dict.get(word, 0)
 
-            message += (
-                f"• {word}: `{daily_count}` / `{monthly_count}` / `{all_time_count}`\n"
-            )
+            message += f"• {word}: {daily_count} / {monthly_count} / {all_time_count}\n"
 
         return message
