@@ -2,7 +2,6 @@
 
 import tempfile
 import os
-from datetime import datetime, timedelta
 from bot.database import FillerWordsDatabase
 
 
