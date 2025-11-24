@@ -17,7 +17,7 @@ def main():
     telegram_token = config("TELEGRAM_BOT_TOKEN")
     if not telegram_token:
         logging.error("TELEGRAM_BOT_TOKEN environment variable is not set")
-        return
+        raise ValueError("TELEGRAM_BOT_TOKEN environment variable is not set")
 
     # Get filler words from environment variable
     filler_words_str = config("FILLER_WORDS", default="")
