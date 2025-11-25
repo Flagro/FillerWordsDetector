@@ -26,10 +26,12 @@ def main():
     ]
 
     if not filler_words:
-        logging.warning(
+        logging.error(
             "No filler words configured! Set FILLER_WORDS environment variable."
         )
-        filler_words = []
+        raise ValueError(
+            "No filler words configured! Set FILLER_WORDS environment variable."
+        )
 
     # Get allowed and admin handles
     allowed_handles_str = config("ALLOWED_HANDLES", default="")
